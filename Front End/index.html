@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html>
+<head>
+<!-- https://demo.tutorialzine.com/2017/08/converting-from-speech-to-text-with-javascript/ We have used and modified the speech to text code from this site --> 
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" type="text/css" href="styling.css">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script type="text/javascript" src="assets/aws-sdk.min.js"></script>
+<script type="text/javascript" src="assets/aws-cognito-sdk.min.js"></script>
+<script type="text/javascript" src="assets/gateway/apigClient.js"></script>
+<script type="text/javascript" src="assets/gateway/lib/apiGatewayCore/apiGatewayClient.js"></script>
+<script type="text/javascript" src="assets/gateway/lib/apiGatewayCore/sigV4Client.js"></script>
+<script type="text/javascript" src="assets/gateway/lib/apiGatewayCore/simpleHttpClient.js"></script>
+<script type="text/javascript" src="assets/gateway/lib/apiGatewayCore/utils.js"></script>
+<script type="text/javascript" src="assets/gateway/lib/axios/dist/axios.standalone.js"></script>
+<script type="text/javascript" src="assets/gateway/lib/CryptoJS/rollups/hmac-sha256.js"></script>
+<script type="text/javascript" src="assets/gateway/lib/CryptoJS/rollups/sha256.js"></script>
+<script type="text/javascript" src="assets/gateway/lib/CryptoJS/components/enc-base64.js"></script>
+<script type="text/javascript" src="assets/gateway/lib/CryptoJS/components/hmac.js"></script>
+<script type="text/javascript" src="assets/gateway/lib/url-template/url-template.js"></script>
+<script src="jwt-decode.min.js"></script>
+  <link href="./Dashboard Template for Bootstrap_files/bootstrap.min.css" rel="stylesheet">
+    <link href="./Dashboard Template for Bootstrap_files/dashboard.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="./stylingindex.css">
+  <style type="text/css">
+    #chatWindow {
+  width:500px;
+  height:500px;
+  margin: auto;
+  background-color: #d9f1f9;
+  border: 1px solid black;
+}
+
+body {
+  padding:0px;
+  background-color: #3a393e;
+}
+.centerr {
+    display: block;
+    margin: 0 auto;
+    padding-top: 50px;
+}
+
+#start-record-btn, #pause-record-btn {
+	display: inline-block;
+}
+
+#chatWindow > .chatHeader{
+  height:40px;
+  width: auto;
+  background-color: lightgreen;
+  border-bottom: 1px solid black;
+  font-size: 25px;
+  margin: auto;
+    padding: 10px;
+    text-align: center;
+}
+#chatWindow > #messagesWindow{
+  margin:auto;
+  width:100%;
+  height:90%;
+  background-color:#f7fbfc ;
+  overflow: auto;
+}
+
+#leftMessage {
+  display:inline;
+  position: relative;
+  margin: 5px 5px 5px 5px;
+}
+#leftMessage div[class=arrow] {
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-right:10px solid #f4be6e;
+}
+#leftMessage div[class=reference] {
+  display: inline;
+  color:blue;
+  text-align: left;
+  background-color: #f4be6e;
+  padding: 20px;
+  margin-left: 10px;
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+}
+
+#leftMessage div[class=messageText] {
+  display:inline;
+  text-align: left;
+  background-color: #f4be6e;
+  padding: 20px;
+  margin-left: -10px;
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+
+
+#rightMessage {
+  display:block;
+  position: relative;
+  margin: 35px 5px 5px 5px;
+  text-align: right;
+}
+#rightMessage div[class=arrow] {
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-left: 10px solid #bfd9f2;
+  margin-left: 99%;
+}
+#rightMessage div[class=reference] {
+  display: inline;
+  color:blue;
+  text-align: left;
+  background-color: #bfd9f2;
+  padding: 20px;
+  margin-left: -10px;
+  margin-right:4px;
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+#rightMessage div[class=messageText] {
+  display:inline;
+  text-align: left;
+  background-color: #bfd9f2;
+  padding: 20px;
+  /*margin-left: -20px;*/
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+}
+#chatWindow > .chatTextBox{
+  background-color: #8d8e8e;
+  border-left: 1px solid black;
+  border-right: 1px solid black;
+  border-bottom: 1px solid black;
+  font-size: 25px;
+    text-align: center;
+}
+input[type=button], input[type=submit], input[type=reset] {
+    margin-left:0px;
+    background-color: #4CAF50;
+    border: none;
+    color: white;
+    padding: 16px 32px;
+    cursor: pointer;
+    width:auto;
+}
+input[type=text] {
+    width: 286px;
+    box-sizing: border-box;
+    border: 2px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    background-color: white;
+    background-position: 10px 10px;
+    background-repeat: no-repeat;
+    padding: 10px 20px 12px 10px;
+}
+input[type=text] + input[type=button]{
+  float:right;
+  height:100%;
+}
+
+#leftMessage div[class=messageText] {
+    display: inline;
+    text-align: left;
+    background-color: #f4be6e;
+    padding: 0px;
+    margin-left: 2px;
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+    }
+
+#map {
+      height: 400px;
+      width: 100%;
+      color: black;
+      }
+
+  </style>
+
+  <script type="text/javascript">
+$(document).ready(function(){
+
+  var messages = [];
+  var lastUserMessage = "";
+  var botMessage = "";
+  var botName = 'Chatbot';
+  var userid = "User";
+  var useremail = "";
+
+  setInterval(function() {
+  var element =  document.getElementById("chatlog");
+  element.scrollTop = element.scrollHeight;
+  }, 700);
+
+  var AWSconfig = {
+    "accessKey":"",
+		"secretKey":"",
+		"S3Bucket":"",
+		"region":"us-east-1",
+		"sessionToken":"",
+		"client_id" :"",
+		"user_pool_id" : "",
+		"cognito_domain_url":"",
+		"redirect_uri" : "",
+		"identity_pool_id":""
+  };
+
+  let apigClient = {};
+
+  var getParameterByName = function(name, url) {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, "\\$&");
+    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+      results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
+  };
+
+  console.log("Code = "+getParameterByName("code"));
+
+  var exchangeAuthCodeForCredentials = function({auth_code = getParameterByName("code"),
+                          client_id = AWSconfig.client_id,
+                          identity_pool_id = AWSconfig.identity_pool_id,
+                          aws_region =AWSconfig.region,
+                          user_pool_id = AWSconfig.user_pool_id,
+                          cognito_domain_url= AWSconfig.cognito_domain_url,
+                          redirect_uri = AWSconfig.redirect_uri}) {
+    return new Promise((resolve, reject) => {
+      var settings = {
+        url: `${cognito_domain_url}/oauth2/token`,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        data: {
+          grant_type: 'authorization_code',
+          client_id: client_id,
+          redirect_uri: redirect_uri,
+          code: auth_code
+        }
+      };
+
+      $.ajax(settings).done(function (response) {
+        console.log('OAuth2 Token Call Responded');
+        console.log(response);
+        console.log(response.access_token);
+        console.log(jwt_decode(response.id_token));
+        console.log("Display email");
+        var jan = jwt_decode(response.id_token);
+        var obj11 = JSON.parse(JSON.stringify(jan));
+        //console.log(jan);
+        console.log(jan['cognito:username']);
+        useremail = obj11.email;
+        userid = jan['cognito:username'];
+        console.log(userid);
+
+        var user_results = "<br>Username: "+userid
+        var user_email = "<br>Email: "+useremail
+        var userDetails = user_results + user_email
+        document.getElementById("User_Details").innerHTML = userDetails;
+        //document.getElementById("User_Email").innerHTML = user_email;
+
+      $.ajax({
+        url:"https://emu7i2r6u4.execute-api.us-east-1.amazonaws.com/Stage1/chatbot",
+        type:'POST',
+        crossDomain: true,
+        contentType: 'application/json',
+        dataType: 'json',
+        data:JSON.stringify({"key": userid}),
+        success:function(data){
+          console.log("success\n");
+          console.log(data);
+          var data1 = JSON.parse(data);
+          console.log("Number of Objects: " + data1.restaurants.length);
+          for(i in data1.restaurants){
+            console.log("Restaurant Name: " + data1.restaurants[i].Rest_name);
+          }
+          //document.getElementById('u1').innerHTML = JSON.parse(data);
+
+          var table = $('<table class="table table-striped table-dark">');
+                				//table.attr('border','2');
+                        table.attr('overflow-x','auto');
+                        table.className = 'table table-striped table-dark';
+                				var tr = $('<tr>');
+                				var td = $('<th>');
+                				td.html("Restuarant Image");
+                				tr.append(td);
+                				td = $('<th>');
+                				td.html('Name');
+                				tr.append(td);
+                				td = $('<th>');
+                				td.html('Rating');
+                				tr.append(td);
+                        td = $('<th>');
+                				td.html('Reviews');
+                				tr.append(td);
+                        td = $('<th>');
+                				td.html('Price');
+                				tr.append(td);
+                        td = $('<th>');
+                				td.html('Contact');
+                				tr.append(td);
+                				table.append(tr);
+                				for(var i=0; i < data1.restaurants.length; i++){
+                					var tr = $('<tr>');
+                					var td = $('<td>');
+                          var img = $('<img/>', {src: data1.restaurants[i].Img_url, width:150, height:75});
+                					//td.html(data1.restaurants[i].Img_url);
+                          td.append(img);
+                          tr.append(td);
+                					td = $('<td>');
+                					td.html(data1.restaurants[i].Rest_name);
+                					tr.append(td);
+                					td = $('<td>');
+                					td.html(data1.restaurants[i].Rating);
+                					tr.append(td);
+                          td = $('<td>');
+                					td.html(data1.restaurants[i].Review_count);
+                					tr.append(td);
+                          td = $('<td>');
+                					td.html(data1.restaurants[i].Price);
+                					tr.append(td);
+                          td = $('<td>');
+                					td.html(data1.restaurants[i].Phone_number);
+                					tr.append(td);
+                					table.append(tr);
+                        }
+                         $('#restHistory').append(table);
+        },
+        error:function(data){
+          alert("error");
+        }
+      });
+
+
+      $.ajax({
+        url:"https://emu7i2r6u4.execute-api.us-east-1.amazonaws.com/Stage1/chatbot",
+        type:'POST',
+        crossDomain: true,
+        contentType: 'application/json',
+        dataType: 'json',
+        data:JSON.stringify({"key": userid}),
+        success:function(data){
+          console.log("API call to create map\n");
+          console.log(data);
+          var data1 = JSON.parse(data);
+
+            var map = new google.maps.Map(document.getElementById('map'), {
+              zoom: 4,
+              center: new google.maps.LatLng(39.8283, -98.5795),
+              mapTypeId: google.maps.MapTypeId.ROADMAP
+            });
+
+            var infowindow = new google.maps.InfoWindow({});
+
+            var marker, i;
+
+            for (var i = 0; i < data1.restaurants.length; i++) {
+              marker = new google.maps.Marker({
+                position: new google.maps.LatLng(data1.restaurants[i].Coord_lat, data1.restaurants[i].Coord_long),
+                map: map
+              });
+
+              google.maps.event.addListener(marker, 'click', (function (marker, i) {
+                return function () {
+                  var info = '<strong>' + data1.restaurants[i].Rest_name + '</strong><br><a href="tel:' + data1.restaurants[i].Phone_number + '">Call</a><br><a href="' + data1.restaurants[i].Yelp_url + '">Yelp URL</a>';
+                  infowindow.setContent(info);
+                  infowindow.open(map, marker);
+                }
+              })(marker, i));
+            }
+        },
+        error:function(data){
+          alert("error");
+        }
+      });
+
+
+
+      $.ajax({
+        url:"https://qhk2nky3mh.execute-api.us-east-1.amazonaws.com/Stage1/chatbot",
+        type:'POST',
+        crossDomain: true,
+        contentType: 'application/json',
+        dataType: 'json',
+        data:JSON.stringify({"key": userid}),
+        success:function(data){
+          console.log("success\n");
+          console.log(data);
+          var data2 = JSON.parse(data);
+          console.log("Number of Objects: " + data2.restaurants.length);
+          for(i in data2.restaurants){
+          console.log("Restaurant Name: " + data2.restaurants[i].Rest_name);
+          }
+          //document.getElementById('u1').innerHTML = JSON.parse(data);
+
+          var table = $('<table class="table table-striped table-dark">');
+                				//table.attr('border','2');
+                        table.attr('overflow-x','auto');
+                        table.className = 'table table-striped table-dark';
+                				var tr = $('<tr>');
+                				var td = $('<th>');
+                				td.html("Restuarant Image");
+                				tr.append(td);
+                				td = $('<th>');
+                				td.html('Name');
+                				tr.append(td);
+                				td = $('<th>');
+                				td.html('Rating');
+                				tr.append(td);
+                        td = $('<th>');
+                				td.html('Reviews');
+                				tr.append(td);
+                        td = $('<th>');
+                				td.html('Price');
+                				tr.append(td);
+                        td = $('<th>');
+                				td.html('Contact');
+                				tr.append(td);
+                				table.append(tr);
+                				for(var i=0; i < data2.restaurants.length; i++){
+                					var tr = $('<tr>');
+                					var td = $('<td>');
+                          var img = $('<img/>', {src: data2.restaurants[i].Img_url, width:150, height:75});
+                					//td.html(data1.restaurants[i].Img_url);
+                          td.append(img);
+                          tr.append(td);
+                					td = $('<td>');
+                					td.html(data2.restaurants[i].Rest_name);
+                					tr.append(td);
+                					td = $('<td>');
+                					td.html(data2.restaurants[i].Rating);
+                					tr.append(td);
+                          td = $('<td>');
+                					td.html(data2.restaurants[i].Review_count);
+                					tr.append(td);
+                          td = $('<td>');
+                					td.html(data2.restaurants[i].Price);
+                					tr.append(td);
+                          td = $('<td>');
+                					td.html(data2.restaurants[i].Phone_number);
+                					tr.append(td);
+                					table.append(tr);
+                        }
+                         $('#restTrending').append(table);
+        },
+        error:function(data){
+          alert("error");
+        }
+      });
+
+      $.ajax({
+        url:"https://8vqjrdkche.execute-api.us-east-1.amazonaws.com/Stage1/chatbot",
+        type:'POST',
+        crossDomain: true,
+        contentType: 'application/json',
+        dataType: 'json',
+        data:JSON.stringify({"key": userid}),
+        success:function(data){
+          console.log("success\n");
+          console.log(data);
+          var data3 = JSON.parse(data);
+          console.log("Number of Objects: " + data3.restaurants.length);
+          for(i in data3.restaurants){
+          console.log("Restaurant Name: " + data3.restaurants[i].Rest_name);
+          }
+          //document.getElementById('u1').innerHTML = JSON.parse(data);
+
+          var table = $('<table class="table table-striped table-dark">');
+                        //table.attr('border','2');
+                        table.attr('overflow-x','auto');
+                        table.className = 'table table-striped table-dark';
+                        var tr = $('<tr>');
+                        var td = $('<th>');
+                        td.html("Restuarant Image");
+                        tr.append(td);
+                        td = $('<th>');
+                        td.html('Name');
+                        tr.append(td);
+                        td = $('<th>');
+                        td.html('Rating');
+                        tr.append(td);
+                        td = $('<th>');
+                        td.html('Reviews');
+                        tr.append(td);
+                        td = $('<th>');
+                        td.html('Price');
+                        tr.append(td);
+                        td = $('<th>');
+                        td.html('Contact');
+                        tr.append(td);
+                        table.append(tr);
+                        for(var i=0; i < data3.restaurants.length; i++){
+                          var tr = $('<tr>');
+                          var td = $('<td>');
+                          var img = $('<img/>', {src: data3.restaurants[i].Img_url, width:150, height:75});
+                          //td.html(data1.restaurants[i].Img_url);
+                          td.append(img);
+                          tr.append(td);
+                          td = $('<td>');
+                          td.html(data3.restaurants[i].Rest_name);
+                          tr.append(td);
+                          td = $('<td>');
+                          td.html(data3.restaurants[i].Rating);
+                          tr.append(td);
+                          td = $('<td>');
+                          td.html(data3.restaurants[i].Review_count);
+                          tr.append(td);
+                          td = $('<td>');
+                          td.html(data3.restaurants[i].Price);
+                          tr.append(td);
+                          td = $('<td>');
+                          td.html(data3.restaurants[i].Phone_number);
+                          tr.append(td);
+                          table.append(tr);
+                        }
+                         $('#chatBotsTop').append(table);
+        },
+        error:function(data){
+          alert("error");
+        }
+      });
+
+       //  window.onload = function() {
+       // //when the document is finished loading, replace everything
+       // //between the <a ...> </a> tags with the value of splitText
+       //  document.getElementById("myLink").innerHTML=obj11.email;
+       //  }
+       // console.log(response.access_token.getJwtToken);
+
+        if (response.id_token) {
+          AWS.config.region = aws_region;
+          AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+            IdentityPoolId : identity_pool_id,
+            Logins : {
+              [`cognito-idp.${aws_region}.amazonaws.com/${user_pool_id}`]: response.id_token
+            }
+          });
+
+          console.log({IdentityPoolId : identity_pool_id,
+            Logins : {
+              [`cognito-idp.${aws_region}.amazonaws.com/${user_pool_id}`]: response.id_token
+            }
+          });
+          // console.log("Displaying now");
+          // console.log(response.id_token);
+          // console.log("done");
+          AWS.config.credentials.refresh(function (error) {
+            console.log("Error",error);
+            if (error) {
+              reject(error);
+            } else {
+              console.log('Successfully Logged In');
+              resolve(AWS.config.credentials);
+            }
+          });
+        } else {
+          reject(response);
+        }
+      });
+    });
+  };
+
+  exchangeAuthCodeForCredentials({auth_code: getParameterByName("code"),
+                  client_id: AWSconfig.client_id,
+                  identity_pool_id: AWSconfig.identity_pool_id,
+                  aws_region: AWSconfig.region,
+                  user_pool_id: AWSconfig.user_pool_id,
+                  cognito_domain_url: AWSconfig.cognito_domain_url,
+                  redirect_uri: AWSconfig.redirect_uri})
+  .then(function(response) {
+    console.log("Inside Then Function",response);
+    apigClient = apigClientFactory.newClient({
+      accessKey: response.accessKeyId,
+      secretKey: response.secretAccessKey,
+      sessionToken: response.sessionToken,
+      region: "us-east-1"
+    });
+  })
+  .catch(function(error) {
+    console.log("error = "+this.error);
+    console.log("response = "+this.response);
+  });
+
+
+  function chatbotResponse() {
+    botMessage = "Yo";
+    console.log("Inside chatbotResponse: " + userid);
+    //var username = userid;
+    var params = {};
+    var body = {
+      "key": lastUserMessage,
+      "UserName": userid,
+      "uemail": useremail
+    };
+
+    apigClient.chatbotPost(params, body, {})
+      .then(function(result){
+        console.log("Success - Then Function");
+        console.log({result});
+        botMessage = result.data;
+        $("#chatlog").append("<br>\nBot: " + botMessage);
+        console.log("data = " + botMessage);
+        // console.log("displayed now");
+        // console.log(getUser());
+      }).catch( function(result){
+      console.log("Inside Catch Function");
+    });
+
+
+    return botMessage;
+  }
+
+  function newEntry() {
+    if (document.getElementById("chatbox").value != "") {
+      lastUserMessage = document.getElementById("chatbox").value;
+      document.getElementById("chatbox").value = "";
+      messages.push("<b>" + userid + ":</b> " + lastUserMessage);
+      botMessage = chatbotResponse();
+      messages.push("<b>" + botName + ":</b> " + botMessage);
+      console.log("Inside Push Function: " + userid);
+      $("#chatlog").append("<br>\n" + userid + ": " + lastUserMessage);
+    }
+  }
+
+  document.onkeypress = keyPress;
+
+  function keyPress(e) {
+    //console.log("Inside keyPress Function: " + userid);
+    //$('#chatlog').scrollTop($('#chatlog')[0].scrollHeight);
+    var x = e || window.event;
+    var key = (x.keyCode || x.which);
+    if (key == 13 || key == 3) {
+    newEntry();
+    }
+  }
+
+  setTimeout(function () {
+  console.log("User ID in ajax: " + userid);
+
+  }, 100);
+
+});
+</script>
+</head>
+<body>
+<button class="tablink" onclick="openPage('Home', this, '#e4b33e')">Home</button>
+<button class="tablink" id="defaultOpen" onclick="openPage('ChatBox', this, '#e4b33e')" >ChatBox</button> <!-- id="defaultOpen" -->
+<button class="tablink" onclick="openPage('Profile', this, '#e4b33e')">My Footprint</button>
+<!-- <button class="tablink" onclick="location.href = 'https://www.google.com';">Logout</button> -->
+<button class="tablink" onClick="location.href = ''">Logout</button>
+<div id="Home" class="tabcontent">
+  <main>
+          <h1>Dashboard</h1>
+
+          <h2>Popular Restaurants</h2>
+          <div class="table-responsive">
+            <p id="restTrending">
+            </p>
+          </div>
+
+          <h2>Rest Finders Top Sugesstions</h2>
+          <div class="table-responsive">
+            <p id="chatBotsTop">
+            </p>
+          </div>
+
+          <h2>Recommendation History</h2>
+          <div class="table-responsive">
+            <p id="restHistory">
+            </p>
+          </div>
+
+        </main>
+</div>
+
+<div id="ChatBox" class="tabcontent">
+  <!-- <div class="centerr"> -->
+   <div class="app" style="text-align:center">
+		<textarea id="chatlog" readonly rows="15" cols="50" class="centerr"></textarea><br>
+  		<input type="text" name="xyz" id="chatbox" class="centerr" /> <br>
+  		<input type="image" src="imic.png" height="50px" width="50px" id="start-record-btn" title="Start Recording"></input>
+        <input type="image" src="pause.png" id="pause-record-btn" height="50px" width="50px" title="Pause Recording"></input>
+  	</div>
+</div>
+
+<div id="Profile" class="tabcontent">
+  <div class="container-fluid">
+      <div class="row">
+        <nav class="col-sm-3 col-md-2 hidden-xs-down sidebar">
+          <ul class="nav flex-column">
+            <h1 align="center">Profile</h1>
+            <img src="upload.png">
+            <p id="User_Details" align="center"></p>
+          </ul>
+        </nav>
+        <div class="col-sm-6 col-md-9">
+          <h1 align="center">Suggestions Tracker</h1>
+          <!-- <h3>Restaurants suggested by restFinder</h3> -->
+          <div id="map"></div>
+        </div>
+      </div>
+  </div>
+</div>
+
+<div id="Logout" class="tabcontent">
+  <h3>Logout</h3>
+  <p>Who we are and what we do.</p>
+</div>
+
+<script>
+function openPage(pageName,elmnt,color) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablink");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].style.backgroundColor = "";
+    }
+    document.getElementById(pageName).style.display = "block";
+    elmnt.style.backgroundColor = color;
+
+}
+// Get the element with id="defaultOpen" and click on it
+document.getElementById("defaultOpen").click();
+</script>
+<script async defer
+src="https://maps.googleapis.com/maps/api/js?key=&callback=initMap">  // removed key from here
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="script123.js"></script>
+</body>
+</html>
